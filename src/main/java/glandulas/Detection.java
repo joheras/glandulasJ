@@ -8,7 +8,7 @@ import ij.plugin.ImageCalculator;
 
 public class Detection {
 
-	protected static ImagePlus processImageHue(String path) {
+	protected static ImagePlus processImageSaturation2(String path) {
 
 		ImagePlus imp = IJ.openImage(path);
 
@@ -16,38 +16,40 @@ public class Detection {
 		ImagePlus imp2 = imp.duplicate();
 		IJ.run(imp, "HSB Stack", "");
 		ImageStack stack = imp.getStack();
-		ImagePlus hue = new ImagePlus(stack.getSliceLabel(1), stack.getProcessor(1));
-		IJ.run(hue, "Median...", "radius=10");
+		ImagePlus saturation = new ImagePlus(stack.getSliceLabel(2), stack.getProcessor(2));
+		IJ.run(saturation, "Median...", "radius=10");
 
 		int width = imp.getWidth();
 		int heigth = imp.getHeight();
 		int x1 = width / 4;
-		int y1 = heigth / 2;
+		int y1 = heigth / 3;
 		int w = x1 * 2;
 		int h = y1;
 
-		hue.setRoi(x1, y1, w, h);
+		saturation.setRoi(x1, y1, w, h);
 
-		ImagePlus huePart = hue.crop();
+		ImagePlus saturationPart = saturation.crop();
 
-		IJ.setAutoThreshold(huePart, "Otsu Dark");
-		double thresh = huePart.getProcessor().getMaxThreshold();
-		// System.out.println(thresh);
 
-		huePart.close();
-		hue.deleteRoi();
+		IJ.setAutoThreshold(saturationPart, "Otsu");
+		double thresh = saturationPart.getProcessor().getMaxThreshold();
 
-		IJ.setRawThreshold(hue, thresh, 255, null);
-		IJ.run(hue, "Convert to Mask", "");
-		IJ.run(hue, "Median...", "radius=10");
-		IJ.run(hue, "Watershed", "");
-		IJ.run(hue, "Median...", "radius=10");
-		IJ.run(hue, "Watershed", "");
+		IJ.run(saturationPart, "Convert to Mask", "");
 
-		IJ.run(hue, "Analyze Particles...", "size=500-Infinity exclude add");
-		hue.changes = false;
+		
+		saturationPart.close();
+		
+		IJ.setRawThreshold(saturation, 10, thresh, null);
+		IJ.run(saturation, "Convert to Mask", "");
+		/*IJ.run(saturation, "Median...", "radius=10");
+		IJ.run(saturation, "Watershed", "");
+		IJ.run(saturation, "Median...", "radius=10");*/
+		IJ.run(saturation, "Watershed", "");
+
+		IJ.run(saturation, "Analyze Particles...", "size=500-Infinity pixel exclude add");
+		saturation.changes = false;
 		// hue.show();
-		hue.close();
+		saturation.close();
 		imp.changes = false;
 		imp.close();
 		// imp2.show();
@@ -60,6 +62,7 @@ public class Detection {
 
 		// Detection phase
 		ImagePlus imp2 = imp.duplicate();
+		IJ.run(imp, "Enhance Contrast...", "saturated=0.3");
 		IJ.run(imp, "HSB Stack", "");
 		ImageStack stack = imp.getStack();
 
@@ -146,7 +149,7 @@ public class Detection {
 		saturation.close();
 
 		IJ.run(imp3, "Watershed", "");
-		IJ.run(imp3, "Analyze Particles...", "size=500-Infinity exclude add");
+		IJ.run(imp3, "Analyze Particles...", "size=500-Infinity pixel exclude add");
 
 		// hue.show();
 		/*

@@ -37,6 +37,16 @@ public class Utils {
 		}
 	}
 	
+	public static double mean(int[] m) {
+	    double sum = 0;
+	    int total = 0;
+	    for (int i = 0; i < m.length; i++) {
+	        total += m[i];
+	        sum += i*m[i];
+	    }
+	    return sum / total;
+	}
+	
 	
 	
 
