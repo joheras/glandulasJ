@@ -75,13 +75,14 @@ public class GlandulasJ_ implements Command {
 
 		// For each file in the folder we detect the esferoid on it.
 		for (String name : files) {
+			double area = computeLeafArea(name);
 			if (!black) {
 				imp = Detection.processImageHueSaturation(name);
 			} else {
 				imp = Detection.processImageSaturation2(name);
 			}
-			// double area = computeLeafArea(name);
-			processOutput(imp, dir, name);//
+			
+			processOutput(imp, dir, name,area);//
 			n++;
 			progressBar.setValue(n);
 		}
@@ -95,7 +96,8 @@ public class GlandulasJ_ implements Command {
 
 	}
 
-	private double computeLeafArea(ImagePlus imp) {
+	private double computeLeafArea(String path) {
+		ImagePlus imp = IJ.openImage(path);
 		IJ.run(imp, "8-bit", "");
 		IJ.setAutoThreshold(imp, "Default dark");
 		IJ.setRawThreshold(imp, 0, 245, null);
@@ -103,11 +105,12 @@ public class GlandulasJ_ implements Command {
 		IJ.run(imp, "Analyze Particles...", "size=20000-Infinity pixel add");
 		RoiManager rm = RoiManager.getInstance();
 		rm.setVisible(false);
-		double area = Utils.getArea(rm.getRoi(0).getPolygon());
-		for (int i = 0; i < rm.getRoisAsArray().length; i++) {
-			rm.select(0);
-			rm.runCommand(imp, "Delete");
-		}
+		Utils.keepBiggestROI(rm);
+		rm.select(0);
+		ResultsTable rt = ResultsTable.getResultsTable();
+		double area = rt.getValue("Area", 0);
+		rm.runCommand("Delete");
+		rt.reset();
 		imp.close();
 		return area;
 
@@ -132,7 +135,7 @@ public class GlandulasJ_ implements Command {
 
 	}
 
-	private void processOutput(ImagePlus imp2, String dir, String path) {
+	private void processOutput(ImagePlus imp2, String dir, String path,double area) {
 		String name = path.substring(path.lastIndexOf("/") + 1, path.lastIndexOf("."));
 
 		// ImagePlus imp = imp2.duplicate();
@@ -179,7 +182,7 @@ public class GlandulasJ_ implements Command {
 			IJ.saveAs(imp2, "JPG", dir + "/preds/" + name + "_pred.jpg");
 
 			double[] value = { cells, stats.getMean(), stats.getStandardDeviation(), stats.getMax(), stats.getMin(),
-					stats.getSum() };
+					stats.getSum(),area,  stats.getSum()/area,cells/area};
 			results.put(name, value);
 		}
 		// imp2.close();
@@ -198,7 +201,7 @@ public class GlandulasJ_ implements Command {
 
 		HSSFRow rowhead = sheet.createRow((short) 0);
 
-		String[] headings = { "File", "# Cells", "Mean area", "Std", "Max area", "Min area", "Covered area" };
+		String[] headings = { "File", "# Cells", "Mean area", "Std", "Max area", "Min area", "Covered area", "Folial Area", "Covered area/Folial area", "# Cells/Follial area" };
 		for (int i = 0; i < headings.length; i++) {
 			rowhead.createCell((short) i).setCellValue(headings[i]);
 		}
